@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shellguard — run untrusted text as arguments, never as shell syntax</title>
+<meta name="description" content="shellguard is a zero-dependency Python library that executes untrusted input as argv data, eliminating shell injection: parentheses, backticks, $(), semicolons, pipes and globs all stay data.">
+<style>
+  :root{--bg:#0b0f14;--fg:#e6edf3;--dim:#9aa7b4;--acc:#4cc2ff;--ok:#3fb950;--card:#11161d;--line:#21262d}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:880px;margin:0 auto;padding:56px 24px}
+  h1{font-size:2.4rem;line-height:1.15;margin:0 0 12px}
+  h2{font-size:1.25rem;margin:44px 0 12px}
+  p{color:var(--dim);margin:0 0 16px}
+  .tag{color:var(--acc);font-weight:600}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  code{background:#1c2128;padding:2px 6px;border-radius:5px;font-size:.9em}
+  pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto;font-size:.9rem;line-height:1.5}
+  pre .bad{color:#ff7b72}pre .good{color:var(--ok)}pre .cm{color:var(--dim)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h3{margin:0 0 6px;font-size:1rem}
+  .card p{font-size:.9rem;margin:0}
+  .cta{display:inline-block;background:var(--acc);color:#04121d;font-weight:700;padding:12px 22px;border-radius:8px;text-decoration:none;margin-top:6px}
+  .ok{color:var(--ok);font-weight:700}
+  ul{color:var(--dim);padding-left:20px}li{margin:6px 0}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:.85rem;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Run untrusted text as <span class="tag">arguments</span>,<br>never as shell syntax.</h1>
+  <p>shellguard is a zero-dependency Python library that kills shell injection at the
+  call site. Every attack token stays data.</p>
+  <a class="cta" href="#install">pip install shellguard</a>
+
+  <h2>The bug it kills</h2>
+  <pre><span class="bad">full = f"cd {cd} &amp;&amp; {oc} run --model {model} {prompt}"</span>
+
+<span class="cm"># prompt = "cost (17*23)"</span>
+<span class="bad">bash: -c: line 1: syntax error near unexpected token `('</span>
+
+<span class="cm"># prompt = "`echo INJECTED`"</span>
+<span class="bad">attacker command executes</span></pre>
+
+  <h2>The fix</h2>
+  <pre><span class="kw">import</span> shellguard <span class="kw">as</span> sg
+
+sg.run([<span class="good">"echo"</span>, <span class="good">"(17*23)"</span>])          <span class="cm"># → '(17*23)\n'</span>
+sg.run([<span class="good">"echo"</span>, <span class="good">"`echo INJECTED`"</span>])  <span class="cm"># → literal text, nothing runs</span>
+sg.run([<span class="good">"echo"</span>, <span class="good">"$(rm -rf /)"</span>])      <span class="cm"># → literal text</span></pre>
+
+  <h2>Verified against 26 real attacks</h2>
+  <div class="grid">
+    <div class="card"><h3>( &nbsp;) &nbsp;' &nbsp;"</h3><p>quote characters and grouping parens never reach a parser</p></div>
+    <div class="card"><h3>` &nbsp;$( )</h3><p>command substitution becomes plain data</p></div>
+    <div class="card"><h3>; &nbsp;| &nbsp;&amp;&amp;</h3><p>chaining, piping and backgrounding are inert</p></div>
+    <div class="card"><h3>* &nbsp;~ &nbsp;$VAR</h3><p>globbing, tilde and variable expansion do not fire</p></div>
+    <div class="card"><h3>&gt; &nbsp;&lt;</h3><p>redirection cannot write files</p></div>
+    <div class="card"><h3>newline</h3><p>an embedded newline cannot start a second command</p></div>
+  </div>
+  <p><span class="ok">Tests: 26/26 passing.</span> Every case runs a real subprocess and
+  asserts on the real exit code and stdout.</p>
+
+  <h2>Install &amp; use</h2>
+  <pre id="install">pip install shellguard
+
+<span class="cm"># safe by default</span>
+r = sg.run([<span class="good">"echo"</span>, user_text])
+print(r.stdout, r.returncode, r.ok)
+
+<span class="cm"># the dangerous path is refused, not the default</span>
+sg.run(<span class="bad">"echo hi; rm -rf /"</span>)   <span class="cm"># raises SafetyError</span>
+sg.run([...], shell=<span class="bad">True</span>)          <span class="cm"># raises SafetyError</span></pre>
+
+  <h2>Why this exists</h2>
+  <p>A production automation system lost hours to exactly this bug: a prompt
+  containing a parenthesis made bash abort, and backticks executed. The failure
+  looked like an unavailable service while short probes still worked. shellguard
+  removes the entire class.</p>
+
+  <ul>
+    <li>Zero dependencies, Python 3.8+</li>
+    <li>MIT licensed, free forever</li>
+    <li>Explicit, opt-in-only shell mode</li>
+    <li>Real exit codes, separate stdout/stderr, timeouts, cwd and env control</li>
+  </ul>
+
+  <footer>
+    <p>shellguard — MIT License. Source and full test suite are public.</p>
+    <p>Free and open source. No paid tier, no tracking, no telemetry.</p>
+  </footer>
+</div>
+</body>
+</html>

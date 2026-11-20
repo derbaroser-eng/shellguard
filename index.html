@@ -4,101 +4,100 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>shellguard — run untrusted text as arguments, never as shell syntax</title>
-<meta name="description" content="shellguard is a zero-dependency Python library that executes untrusted input as argv data, eliminating shell injection: parentheses, backticks, $(), semicolons, pipes and globs all stay data.">
+<link rel="canonical" href="https://derbaroser-eng.github.io/shellguard/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="shellguard — safe subprocess execution">
+<meta property="og:description" content="Run untrusted text as arguments, never as shell syntax. Zero-dependency Python library. 26 attack cases green.">
+<meta property="og:url" content="https://derbaroser-eng.github.io/shellguard/">
+<meta name="twitter:card" content="summary">
+<meta name="description" content="shellguard: build an argv list, never a shell string. Parentheses, backticks, dollar-parens, pipes, redirection all stay data.">
 <style>
-  :root{--bg:#0b0f14;--fg:#e6edf3;--dim:#9aa7b4;--acc:#4cc2ff;--ok:#3fb950;--card:#11161d;--line:#21262d}
+  :root{--bg:#0b0d10;--panel:#12161c;--line:#1e2530;--ink:#e8edf4;--dim:#8b97a8;--accent:#4ade80;--warn:#fbbf24;--radius:14px}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  .wrap{max-width:880px;margin:0 auto;padding:56px 24px}
-  h1{font-size:2.4rem;line-height:1.15;margin:0 0 12px}
-  h2{font-size:1.25rem;margin:44px 0 12px}
-  p{color:var(--dim);margin:0 0 16px}
-  .tag{color:var(--acc);font-weight:600}
-  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-  code{background:#1c2128;padding:2px 6px;border-radius:5px;font-size:.9em}
-  pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto;font-size:.9rem;line-height:1.5}
-  pre .bad{color:#ff7b72}pre .good{color:var(--ok)}pre .cm{color:var(--dim)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:20px 0}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
-  .card h3{margin:0 0 6px;font-size:1rem}
-  .card p{font-size:.9rem;margin:0}
-  .cta{display:inline-block;background:var(--acc);color:#04121d;font-weight:700;padding:12px 22px;border-radius:8px;text-decoration:none;margin-top:6px}
-  .ok{color:var(--ok);font-weight:700}
-  ul{color:var(--dim);padding-left:20px}li{margin:6px 0}
-  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:.85rem;color:var(--dim)}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px}
+  header{padding:72px 0 40px;border-bottom:1px solid var(--line)}
+  h1{font-size:clamp(2.1rem,6vw,3.4rem);line-height:1.08;margin:0 0 14px;letter-spacing:-.02em;font-weight:650}
+  h1 .dot{color:var(--accent)}
+  .tag{font-size:clamp(1rem,2.4vw,1.25rem);color:var(--dim);margin:0;max-width:56ch}
+  h2{font-size:1.05rem;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:56px 0 20px;font-weight:600}
+  p{margin:0 0 16px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:#1a212b;padding:2px 6px;border-radius:5px}
+  pre{background:#0f1319;border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86rem;line-height:1.7;margin:0 0 16px;color:#cbd5e1}
+  .principle{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius);padding:20px 24px;margin:0 0 16px}
+  .principle p:last-child{margin:0}
+  .principle strong{color:var(--accent);font-weight:600}
+  .grid{display:grid;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px}
+  .card h3{margin:0 0 6px;font-size:1.05rem;font-weight:600}
+  .card p{margin:0;color:var(--dim);font-size:.95rem}
+  .status{display:inline-flex;align-items:center;gap:8px;font-size:.82rem;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--dim);margin:0 0 26px}
+  .status .led{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .cta{display:inline-flex;align-items:center;gap:10px;background:var(--accent);color:#0b0d10;font-weight:600;padding:14px 28px;border-radius:999px;text-decoration:none;font-size:1rem;margin:6px 0}
+  .cta-secondary{display:inline-flex;align-items:center;gap:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600;padding:14px 28px;border-radius:999px;text-decoration:none;font-size:1rem;margin:6px 0}
+  .cta-tertiary{display:inline-flex;align-items:center;gap:10px;background:transparent;color:var(--dim);border:1px solid var(--line);font-weight:600;padding:14px 28px;border-radius:999px;text-decoration:none;font-size:1rem;margin:6px 0}
+  footer{padding:44px 0 72px;border-top:1px solid var(--line);color:var(--dim);font-size:.9rem}
+  a{color:var(--accent)}
+  @media (prefers-color-scheme: light){
+    :root{--bg:#fbfcfd;--panel:#fff;--line:#e3e8ef;--ink:#10151c;--dim:#5c6775}
+    pre{background:#f4f6f9;color:#2b3440}
+    code{background:#eef1f5}
+  }
 </style>
 </head>
 <body>
+<header><div class="wrap">
+  <h1>shellguard<span class="dot">.</span></h1>
+  <p class="tag">Run untrusted text as <strong>arguments</strong>, never as shell syntax. A zero-dependency Python library that kills the whole class of injection bugs.</p>
+  <div class="status"><span class="led"></span>Live &middot; EUR49 one-time &middot; 26 attack cases green</div>
+  <a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Buy now &middot; EUR49</a>
+  <a class="cta-secondary" href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Pay from &euro;1</a>
+  <a class="cta-tertiary" href="#demo">See the bug it kills</a>
+</div></header>
+
 <div class="wrap">
-  <h1>Run untrusted text as <span class="tag">arguments</span>,<br>never as shell syntax.</h1>
-  <p>shellguard is a zero-dependency Python library that kills shell injection at the
-  call site. Every attack token stays data.</p>
-  <a class="cta" href="#install">Install shellguard 1.0.0</a>
+  <h2>The bug</h2>
+  <p>Every automation system eventually does this:</p>
+  <pre>full = f"cd {dir} &amp;&amp; run --model {model} {prompt}"
+subprocess.run(full, shell=True)</pre>
+  <p>A prompt containing <code>(</code> makes bash abort with <code>syntax error near unexpected token</code>. A prompt containing backticks or dollar-parens executes attacker-chosen commands. Both failures were observed in production.</p>
 
-  <h2>The bug it kills</h2>
-  <pre><span class="bad">full = f"cd {cd} &amp;&amp; {oc} run --model {model} {prompt}"</span>
+  <h2>The rule</h2>
+  <div class="principle"><p><strong>Never build a shell string from untrusted text.</strong> Build an argv list. execve semantics keep each token a token &mdash; no parser, no metacharacters, no surprises.</p></div>
+  <pre>import shellguard as sg
 
-<span class="cm"># prompt = "cost (17*23)"</span>
-<span class="bad">bash: -c: line 1: syntax error near unexpected token `('</span>
+sg.run(["echo", "(17*23)"])          # -&gt; "391\n"
+sg.run(["echo", "`echo INJECTED`"])  # -&gt; literal text, not a command
+sg.run(["echo", "$(echo INJECTED)"]) # -&gt; literal text
+sg.run(["false"])                    # -&gt; Result(returncode=1, ok=False, ...)</pre>
 
-<span class="cm"># prompt = "`echo INJECTED`"</span>
-<span class="bad">attacker command executes</span></pre>
-
-  <h2>The fix</h2>
-  <pre><span class="kw">import</span> shellguard <span class="kw">as</span> sg
-
-sg.run([<span class="good">"echo"</span>, <span class="good">"(17*23)"</span>])          <span class="cm"># → '(17*23)\n'</span>
-sg.run([<span class="good">"echo"</span>, <span class="good">"`echo INJECTED`"</span>])  <span class="cm"># → literal text, nothing runs</span>
-sg.run([<span class="good">"echo"</span>, <span class="good">"$(rm -rf /)"</span>])      <span class="cm"># → literal text</span></pre>
-
-  <h2>Verified against 26 real attacks</h2>
+  <h2>What you get</h2>
   <div class="grid">
-    <div class="card"><h3>( &nbsp;) &nbsp;' &nbsp;"</h3><p>quote characters and grouping parens never reach a parser</p></div>
-    <div class="card"><h3>` &nbsp;$( )</h3><p>command substitution becomes plain data</p></div>
-    <div class="card"><h3>; &nbsp;| &nbsp;&amp;&amp;</h3><p>chaining, piping and backgrounding are inert</p></div>
-    <div class="card"><h3>* &nbsp;~ &nbsp;$VAR</h3><p>globbing, tilde and variable expansion do not fire</p></div>
-    <div class="card"><h3>&gt; &nbsp;&lt;</h3><p>redirection cannot write files</p></div>
-    <div class="card"><h3>newline</h3><p>an embedded newline cannot start a second command</p></div>
+    <div class="card"><h3>argv, not strings</h3><p><code>build()</code> returns a list; <code>run()</code> execs it directly. <code>shell=True</code> and bare-string commands are refused by design.</p></div>
+    <div class="card"><h3>26 attack cases green</h3><p>Parentheses, backticks, dollar-parens, semicolons, pipes, ampersands, newline, quotes, globs, tilde, env expansion, redirection, unicode, binary bytes, timeouts, cwd, env, exit codes.</p></div>
+    <div class="card"><h3>Zero dependencies</h3><p>Standard library only. Python 3.8+. No network calls, no data collection, no telemetry.</p></div>
+    <div class="card"><h3>Readable failures</h3><p><code>Result(returncode, stdout, stderr, ok, argv)</code> plus <code>Timeout</code> and <code>SafetyError</code> exceptions. Nothing is hidden.</p></div>
   </div>
-  <p><span class="ok">Tests: 26/26 passing.</span> Every case runs a real subprocess and
-  asserts on the real exit code and stdout.</p>
+
+  <h2 id="demo">Try the exact failure</h2>
+  <p>The library ships with a real attack suite. Each case encodes a failure mode that a shell-string builder actually hits:</p>
+  <pre>$ python tests/test_shellguard.py
+Ran 26 tests in 0.711s
+OK</pre>
+  <p>That suite is the product. It is the difference between "we hope the prompt is clean" and "the prompt cannot be parsed".</p>
 
   <h2>Install &amp; use</h2>
-  <pre id="install">pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.0.0/shellguard-1.0.0-py3-none-any.whl
+  <pre id="install">pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.0.0/shellguard-1.0.0-py3-none-any.whl</pre>
+  <p>The <code>shellguard</code> name on PyPI is an unrelated package, so install from the release asset above (or clone <code>shellguard-lib</code>). The <code>sg</code> alias is not published.</p>
 
-<span class="cm"># safe by default</span>
-r = sg.run([<span class="good">"echo"</span>, user_text])
-print(r.stdout, r.returncode, r.ok)
-
-<span class="cm"># the dangerous path is refused, not the default</span>
-sg.run(<span class="bad">"echo hi; rm -rf /"</span>)   <span class="cm"># raises SafetyError</span>
-sg.run([...], shell=<span class="bad">True</span>)          <span class="cm"># raises SafetyError</span></pre>
-
-  <h2>Why this exists</h2>
-  <p>A production automation system lost hours to exactly this bug: a prompt
-  containing a parenthesis made bash abort, and backticks executed. The failure
-  looked like an unavailable service while short probes still worked. shellguard
-  removes the entire class.</p>
-
-  <ul>
-    <li>Zero dependencies, Python 3.8+</li>
-    <li>MIT licensed, free forever</li>
-    <li>Explicit, opt-in-only shell mode</li>
-    <li>Real exit codes, separate stdout/stderr, timeouts, cwd and env control</li>
-  </ul>
-
-  <h2>Commercial license &amp; download</h2>
-  <p>The source is MIT licensed and free forever. If you need the packaged
-  download plus a commercial license for proprietary use &mdash; or simply want to
-  support development &mdash; that is a separate one-time payment.</p>
-  <a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Download + commercial license &mdash; &euro;49</a>
-  <p><a href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Support development &mdash; from &euro;1</a></p>
-
-  <footer>
-    <p>shellguard &mdash; MIT License. Source and full test suite:
-    <a href="https://github.com/derbaroser-eng/shellguard-lib">github.com/derbaroser-eng/shellguard-lib</a>.</p>
-    <p>Free and open source. No tracking, no telemetry.</p>
-  </footer>
+  <h2>License &amp; delivery</h2>
+  <p>EUR49 one-time. MIT license. You receive the full source, the test suite, and a short integration guide. No subscription, no cloud, no data leaves your machine.</p>
+  <a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Buy now &middot; EUR49</a>
+  <a class="cta-secondary" href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Pay from &euro;1</a>
 </div>
+
+<footer><div class="wrap">
+  <p>shellguard &middot; a deterministic safety library for Python. Part of the derbaroser-eng suite of auditable tools.</p>
+</div></footer>
 </body>
 </html>

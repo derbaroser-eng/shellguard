@@ -7,7 +7,7 @@
 <link rel="canonical" href="https://derbaroser-eng.github.io/shellguard/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="shellguard — safe subprocess execution">
-<meta property="og:description" content="Run untrusted text as arguments, never as shell syntax. Zero-dependency Python library. 103 tests green.">
+<meta property="og:description" content="Run untrusted text as arguments, never as shell syntax. Zero-dependency Python library. 105 tests green.">
 <meta property="og:url" content="https://derbaroser-eng.github.io/shellguard/">
 <meta name="twitter:card" content="summary">
 <meta name="description" content="shellguard: build an argv list, never a shell string. Parentheses, backticks, dollar-parens, pipes, redirection all stay data.">
@@ -49,7 +49,7 @@
 <header><div class="wrap">
   <h1>shellguard<span class="dot">.</span></h1>
   <p class="tag">Run untrusted text as <strong>arguments</strong>, never as shell syntax. A zero-dependency Python library that kills the whole class of injection bugs.</p>
-  <div class="status"><span class="led"></span>Live &middot; EUR49 one-time &middot; 103 tests green</div>
+  <div class="status"><span class="led"></span>Live &middot; EUR49 one-time &middot; 105 tests green</div>
   <a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Buy now &middot; EUR49</a>
   <a class="cta-secondary" href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Pay from &euro;1</a>
   <a class="cta-tertiary" href="#demo">See the bug it kills</a>
@@ -74,8 +74,8 @@ sg.run(["false"])                    # -&gt; Result(returncode=1, ok=False, ...)
   <h2>What you get</h2>
   <div class="grid">
     <div class="card"><h3>argv, not strings</h3><p><code>build()</code> returns a list; <code>run()</code> execs it directly. <code>shell=True</code> and bare-string commands are refused by design.</p></div>
-    <div class="card"><h3>103 tests green</h3><p>26 real attack cases + 16 license-key cases + 24 CLI cases + 18 delivery cases + 19 audit cases. Parentheses, backticks, dollar-parens, semicolons, pipes, ampersands, newline, quotes, globs, tilde, env expansion, redirection, unicode, binary bytes, timeouts, cwd, env, exit codes.</p></div>
-    <div class="card"><h3>sg audit</h3><p>Scans your repo for <code>shell=True</code>, <code>os.system</code>/<code>os.popen</code> and string subprocess calls. Exit 1 on findings, <code>--json</code> for CI.</p></div>
+    <div class="card"><h3>105 tests green</h3><p>26 real attack cases + 16 license-key cases + 24 CLI cases + 18 delivery cases + 21 audit cases. Parentheses, backticks, dollar-parens, semicolons, pipes, ampersands, newline, quotes, globs, tilde, env expansion, redirection, unicode, binary bytes, timeouts, cwd, env, exit codes.</p></div>
+    <div class="card"><h3>sg audit</h3><p>Scans your repo for <code>shell=True</code>, <code>os.system</code>/<code>os.popen</code>, <code>asyncio.create_subprocess_shell</code> and string subprocess calls. Exit 1 on findings, <code>--json</code> for CI.</p></div>
     <div class="card"><h3>Zero dependencies</h3><p>Standard library only. Python 3.8+. No network calls, no data collection, no telemetry.</p></div>
     <div class="card"><h3>Readable failures</h3><p><code>Result(returncode, stdout, stderr, ok, argv)</code> plus <code>Timeout</code> and <code>SafetyError</code> exceptions. Nothing is hidden.</p></div>
   </div>
@@ -83,17 +83,17 @@ sg.run(["false"])                    # -&gt; Result(returncode=1, ok=False, ...)
   <h2 id="demo">Try the exact failure</h2>
   <p>The library ships with a real attack suite. Each case encodes a failure mode that a shell-string builder actually hits:</p>
   <pre>$ PYTHONPATH=src python -m unittest discover -s tests -p "test_*.py"
-Ran 103 tests in 1.2s
+Ran 105 tests in 1.2s
 OK</pre>
   <p>That suite is the product. It is the difference between "we hope the prompt is clean" and "the prompt cannot be parsed".</p>
 
   <h2>Install &amp; use</h2>
-  <pre id="install">pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.2.0/shellguard-1.2.0-py3-none-any.whl</pre>
+  <pre id="install">pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.3.0/shellguard-1.3.0-py3-none-any.whl</pre>
   <p>The <code>shellguard</code> name on PyPI is an unrelated package, so install from the release asset above (or clone <code>shellguard-lib</code>). The <code>sg</code> alias is not published.
   <p>Paying buyers are fulfilled automatically: the EUR49 checkout emits a Stripe <code>checkout.session.completed</code> event, and <code>sg deliver</code> turns it into a signed, order-bound license key plus the delivery email. Same order, same key &mdash; a retried webhook cannot mint a second key.</p>
 
   <h2>License &amp; delivery</h2>
-  <p>EUR49 one-time. MIT license. You receive the full source, the 103-test suite, and a short integration guide. Delivery is automatic and offline: <code>sg deliver --session event.json --secret SECRET --min-cents 4900 --currency EUR</code>. No subscription, no cloud, no data leaves your machine.</p>
+  <p>EUR49 one-time. MIT license. You receive the full source, the 105-test suite, and a short integration guide. Delivery is automatic and offline: <code>sg deliver --session event.json --secret SECRET --min-cents 4900 --currency EUR</code>. No subscription, no cloud, no data leaves your machine.</p>
   <a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Buy now &middot; EUR49</a>
   <a class="cta-secondary" href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Pay from &euro;1</a>
 </div>

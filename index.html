@@ -33,7 +33,7 @@
   <h1>Run untrusted text as <span class="tag">arguments</span>,<br>never as shell syntax.</h1>
   <p>shellguard is a zero-dependency Python library that kills shell injection at the
   call site. Every attack token stays data.</p>
-  <a class="cta" href="#install">pip install shellguard</a>
+  <a class="cta" href="#install">Install shellguard 1.0.0</a>
 
   <h2>The bug it kills</h2>
   <pre><span class="bad">full = f"cd {cd} &amp;&amp; {oc} run --model {model} {prompt}"</span>
@@ -64,7 +64,7 @@ sg.run([<span class="good">"echo"</span>, <span class="good">"$(rm -rf /)"</span
   asserts on the real exit code and stdout.</p>
 
   <h2>Install &amp; use</h2>
-  <pre id="install">pip install shellguard
+  <pre id="install">pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.0.0/shellguard-1.0.0-py3-none-any.whl
 
 <span class="cm"># safe by default</span>
 r = sg.run([<span class="good">"echo"</span>, user_text])
@@ -87,9 +87,17 @@ sg.run([...], shell=<span class="bad">True</span>)          <span class="cm"># r
     <li>Real exit codes, separate stdout/stderr, timeouts, cwd and env control</li>
   </ul>
 
+  <h2>Commercial license &amp; download</h2>
+  <p>The source is MIT licensed and free forever. If you need the packaged
+  download plus a commercial license for proprietary use &mdash; or simply want to
+  support development &mdash; that is a separate one-time payment.</p>
+  <a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Download + commercial license &mdash; &euro;49</a>
+  <p><a href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Support development &mdash; from &euro;1</a></p>
+
   <footer>
-    <p>shellguard — MIT License. Source and full test suite are public.</p>
-    <p>Free and open source. No paid tier, no tracking, no telemetry.</p>
+    <p>shellguard &mdash; MIT License. Source and full test suite:
+    <a href="https://github.com/derbaroser-eng/shellguard-lib">github.com/derbaroser-eng/shellguard-lib</a>.</p>
+    <p>Free and open source. No tracking, no telemetry.</p>
   </footer>
 </div>
 </body>

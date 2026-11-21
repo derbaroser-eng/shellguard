@@ -33,6 +33,8 @@
   .card p{margin:0;color:var(--dim);font-size:.95rem}
   .status{display:inline-flex;align-items:center;gap:8px;font-size:.82rem;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--dim);margin:0 0 26px}
   .status .led{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .ci{margin:0 0 18px}
+  .ci img{vertical-align:middle}
   .cta{display:inline-flex;align-items:center;gap:10px;background:var(--accent);color:#0b0d10;font-weight:600;padding:14px 28px;border-radius:999px;text-decoration:none;font-size:1rem;margin:6px 0}
   .cta-secondary{display:inline-flex;align-items:center;gap:10px;background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600;padding:14px 28px;border-radius:999px;text-decoration:none;font-size:1rem;margin:6px 0}
   .cta-tertiary{display:inline-flex;align-items:center;gap:10px;background:transparent;color:var(--dim);border:1px solid var(--line);font-weight:600;padding:14px 28px;border-radius:999px;text-decoration:none;font-size:1rem;margin:6px 0}
@@ -50,6 +52,7 @@
   <h1>shellguard<span class="dot">.</span></h1>
   <p class="tag">Run untrusted text as <strong>arguments</strong>, never as shell syntax. A zero-dependency Python library that kills the whole class of injection bugs.</p>
   <div class="status"><span class="led"></span>Live &middot; EUR49 one-time &middot; 111 tests green</div>
+  <p class="ci"><a href="https://github.com/derbaroser-eng/shellguard-lib/actions/workflows/shellguard-audit.yml"><img src="https://github.com/derbaroser-eng/shellguard-lib/actions/workflows/shellguard-audit.yml/badge.svg" alt="shellguard self-audit CI: live status"></a></p>
   <a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Buy now &middot; EUR49</a>
   <a class="cta-secondary" href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Pay from &euro;1</a>
   <a class="cta-tertiary" href="#demo">See the bug it kills</a>
@@ -86,6 +89,14 @@ sg.run(["false"])                    # -&gt; Result(returncode=1, ok=False, ...)
 Ran 111 tests in 1.2s
 OK</pre>
   <p>That suite is the product. It is the difference between "we hope the prompt is clean" and "the prompt cannot be parsed".</p>
+
+  <h2>CI gate</h2>
+  <p>The badge above is this library's own live self-audit: every push runs the published GitHub Action against the source. Add the same gate to your pipeline:</p>
+  <pre>- uses: actions/checkout@v4
+- uses: derbaroser-eng/shellguard-action@v1
+  with:
+    path: src</pre>
+  <p>Exit 0 clean, exit 1 on findings (the build fails), exit 2 on bad input. The release wheel is sha256-verified before install, and option-injection paths are rejected.</p>
 
   <h2>Install &amp; use</h2>
   <pre id="install">pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.4.0/shellguard-1.4.0-py3-none-any.whl</pre>

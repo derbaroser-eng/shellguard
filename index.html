@@ -84,6 +84,8 @@ sg.run(["false"])                    # -&gt; Result(returncode=1, ok=False, ...)
     <div class="card"><h3>Readable failures</h3><p><code>Result(returncode, stdout, stderr, ok, argv)</code> plus <code>Timeout</code> and <code>SafetyError</code> exceptions. Nothing is hidden.</p></div>
   </div>
 
+  <p class="alt">New field note: <a href="/shellguard/why-argv/">the parenthesis that broke our command</a>.</p>
+
   <h2 id="demo">Try the exact failure</h2>
   <p>The library ships with a real attack suite. Each case encodes a failure mode that a shell-string builder actually hits:</p>
   <pre>$ PYTHONPATH=src python -m unittest discover -s tests -p "test_*.py"

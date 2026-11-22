@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A parenthesis broke our command. Here's the rule that fixed it. — shellguard field notes</title>
+<link rel="canonical" href="https://derbaroser-eng.github.io/shellguard/why-argv/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="A parenthesis broke our command. Here's the rule that fixed it.">
+<meta property="og:description" content="A field note on shell injection, argv lists, and the CWE-88 cases most linters miss.">
+<meta name="description" content="A field note on shell injection, argv lists, and the CWE-88 cases most linters miss.">
+<style>
+  :root{--bg:#0b0d10;--panel:#12161c;--line:#1e2530;--ink:#e8edf4;--dim:#8b97a8;--accent:#4ade80;--warn:#fbbf24;--radius:14px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.75 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  header{padding:64px 0 36px;border-bottom:1px solid var(--line)}
+  h1{font-size:clamp(2rem,5.5vw,3rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 16px;font-weight:650}
+  .meta{color:var(--dim);font-size:.9rem}
+  h2{font-size:1.35rem;margin:52px 0 16px;font-weight:600}
+  p{margin:0 0 18px}
+  a{color:var(--accent)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:#1a212b;padding:2px 6px;border-radius:5px}
+  pre{background:#0f1319;border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;overflow-x:auto;font:14px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:#cbd5e1;margin:0 0 22px}
+  pre code{background:none;padding:0;font-size:inherit}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:var(--radius);padding:18px 22px;margin:24px 0}
+  .note p:last-child{margin:0}
+  footer{border-top:1px solid var(--line);margin-top:64px;padding:36px 0 72px;color:var(--dim);font-size:.92rem}
+  .back{display:inline-block;margin-bottom:20px;font-size:.9rem}
+  @media (prefers-color-scheme: light){:root{--bg:#fbfcfd;--panel:#fff;--line:#e3e8ef;--ink:#10151c;--dim:#5c6775}pre{background:#f4f6f9;color:#2b3440}code{background:#eef1f5}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a class="back" href="/shellguard/">&larr; shellguard</a>
+  <h1>A parenthesis broke our command. Here's the rule that fixed it.</h1>
+  <div class="meta">Field note &middot; 22 November 2026 &middot; 7 min read</div>
+</header>
+
+<main>
+<p>I still remember the error line. Not the whole incident &mdash; just this:</p>
+<pre>bash: -c: line 1: syntax error near unexpected token `('</pre>
+<p>Someone had typed <code>(17*23)</code> into a prompt field, and our automation had pasted that text straight into a shell string. The command died before it ran. Nobody was attacking us. A perfectly ordinary human input was enough.</p>
+<p>The crash was not the scary part. The near miss was. If that same person had typed backticks or <code>$(...)</code>, the shell would have run whatever was inside. Same code path, same bug, much worse afternoon.</p>
+<p>I have seen that shape since in CI helpers, deploy scripts and more than one agent framework. It always looks like this:</p>
+<pre><code>full = f"cd {cd} &amp;&amp; {oc} run --model {model} {prompt}"
+subprocess.run(full, shell=True)</code></pre>
+<p>It reads fine. It looks like a command. And that is exactly the problem: it <em>is</em> a command, assembled out of pieces that somebody else controls.</p>
+
+<h2>The habit that actually fixes it</h2>
+<p>Stop building shell strings. Build argument lists.</p>
+<p>When you hand the operating system an argv list, there is no parser in the middle. Every element is one token, whether it holds a parenthesis, backticks, a semicolon, a newline, or the word <code>rm</code>. Nothing gets reinterpreted. That is execve semantics, and it has been the right answer for decades &mdash; we just keep forgetting it when a string is convenient.</p>
+<pre><code>import shellguard as sg
+
+sg.run(["echo", "(17*23)"])          # prints (17*23)
+sg.run(["echo", "`echo INJECTED`"])  # prints those characters, literally
+sg.run(["echo", "$(touch pwned)"])   # no file is created</code></pre>
+<p>Notice what did <em>not</em> happen: no escaping, no denylist, no regex that tries to guess which characters are dangerous. Escaping is where people lose. Every denylist has a character nobody thought of. An argument list does not care.</p>
+
+<h2>The case that keeps catching people out</h2>
+<p>Shell metacharacters are the famous bug. The quieter one is argument injection, CWE-88. Suppose a user controls a value that lands as a separate argv token:</p>
+<pre><code>subprocess.run(["curl", url, output_flag])   # output_flag = "-o /etc/passwd"</code></pre>
+<p>No shell is involved, so the usual "never use shell=True" advice says this is fine. It is not. The program receiving those arguments treats <code>-o</code> as an option. You handed the user control of the program's flags.</p>
+<p>There is a second version of this that bit us on Git Bash and MSYS. A plain <code>*</code> in an unquoted token gets expanded by the shell layer before the program sees it. The token was data; the runtime turned it into a glob. Our audit engine flags both cases &mdash; a provable leading <code>-</code> on an untrusted token, and wildcard characters that MSYS would expand.</p>
+<div class="note"><p><strong>The rule of thumb I use now:</strong> if untrusted text can become a token, either put it after an explicit <code>--</code> where the tool supports it, or validate it against a strict shape. "It is in an argv list" solves shell injection. It does not solve option injection.</p></div>
+
+<h2>How we stopped arguing about it</h2>
+<p>Opinions do not survive a deadline. Tests do. The library has 126 of them, and the suite is the product more than the code is. It encodes the ways a shell-string builder actually fails: parentheses, backticks, <code>$( )</code>, semicolons, pipes, <code>&amp;&amp;</code>, newlines, quotes, globs, tilde, environment expansion, redirection, unicode, binary bytes, timeouts, working directories, and stdout/stderr separation. Plus cases for forged license keys, CLI exit codes, and the audit scanner itself.</p>
+<p>There is also a self-audit: a GitHub Action scans the library's own source for <code>shell=True</code>, <code>os.system</code>, <code>os.popen</code>, <code>asyncio.create_subprocess_shell</code>, and string-built argv, including aliased imports. It runs on every push and fails the build on findings. I like that arrangement &mdash; the tool is held to the same standard it sells.</p>
+
+<h2>What it will not do for you</h2>
+<p>Worth being blunt about the edges. The taint analysis is intra-file and intra-function. It will not follow a value through a call into another module, and it does not attempt to understand dynamically built command prefixes. If your danger lives in a different file, the scanner will not connect the dots. Unsupported languages and files it cannot parse are reported as skipped, with the reason, instead of being quietly counted as clean.</p>
+<p>And no tool in this space can honestly promise compliance. What you can get is a dated, signed record of what was examined, what was found, and what was out of scope. That is a much more useful artifact than a green checkmark with no memory.</p>
+
+<h2>Try it</h2>
+<p>Zero dependencies, Python 3.8+, stdlib only. No network calls, no telemetry.</p>
+<pre>pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.4.0/shellguard-1.4.0-py3-none-any.whl
+python -m unittest discover -s tests -p "test_*.py"</pre>
+<p>The source, the attack suite and the CI gate are on <a href="https://github.com/derbaroser-eng/shellguard-lib">GitHub</a>. If you want the packaged source and an integration guide, <a href="/shellguard/">the product page</a> has it.</p>
+<p>If this saved you a bad afternoon, tell me which metacharacter got you. Mine was the parenthesis.</p>
+</main>
+
+<footer>&mdash; Elena<br><a href="/shellguard/">shellguard</a> &middot; deterministic safety tools for Python</footer>
+</div>
+</body>
+</html>

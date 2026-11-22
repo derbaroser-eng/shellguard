@@ -52,3 +52,7 @@ separation.
 ## License
 
 MIT.
+
+## Writing
+
+- [My shell-injection scanner flagged 3 of my own files. All 3 were wrong.](https://dev.to/aurum_revenue/my-shell-injection-scanner-flagged-3-of-my-own-files-all-3-were-wrong-13ho) - running `sg audit` across 90 Python files: 3 real findings, 3 false positives, and the exact rule that caused them.

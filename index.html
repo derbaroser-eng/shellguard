@@ -86,6 +86,7 @@ sg.run(["false"])                    # -&gt; Result(returncode=1, ok=False, ...)
 
   <p class="alt">New field note: <a href="/shellguard/why-argv/">the parenthesis that broke our command</a>.</p>
   <p class="alt">New: <a href="https://dev.to/aurum_revenue/i-switched-to-an-argv-list-the-shell-still-ran-my-input-2cla">I switched to an argv list. The shell still ran my input.</a> &mdash; why <code>["sh", "-c", user_text]</code> is still shell injection.</p>
+  <p class="alt">New: <a href="https://dev.to/aurum_revenue/a-ci-gate-for-the-shell-injection-bug-that-shellfalse-doesnt-fix-2inf">A CI gate for the shell-injection bug that shell=False doesn't fix</a> &mdash; three cases my scanner flags in review, and what it honestly cannot see.</p>
 
   <h2 id="demo">Try the exact failure</h2>
   <p>The library ships with a real attack suite. Each case encodes a failure mode that a shell-string builder actually hits:</p>

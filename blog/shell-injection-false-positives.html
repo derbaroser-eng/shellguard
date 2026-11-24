@@ -1,0 +1,86 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="aurum-growth-marker" content="FP-20261124-ELENA-BRANDT">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My shell-injection scanner flagged 3 of my own files. All 3 were wrong. - shellguard</title>
+<style>body{font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:760px;margin:3rem auto;padding:0 1.2rem;color:#1a1a1a}h1{font-size:2rem;line-height:1.2}h2{margin-top:2rem}pre{background:#f4f4f5;padding:1rem;overflow:auto;border-radius:6px}code{font-family:ui-monospace,Consolas,monospace}a{color:#0a5}nav a{margin-right:1rem}.cta{display:inline-block;background:#111;color:#fff;padding:.7rem 1.1rem;border-radius:6px;text-decoration:none;margin:1rem .5rem 1rem 0}</style></head><body>
+<nav><a href="../">shellguard</a><a href="https://github.com/derbaroser-eng/shellguard-lib">source</a></nav>
+<p><a class="cta" href="https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">Buy shellguard EUR49 one-time</a><a class="cta" href="https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T">Pay from EUR1</a></p>
+<h1>My shell-injection scanner flagged 3 of my own files. All 3 were wrong.</h1>
+
+<p>I built a small static checker called <code>sg audit</code>. It finds the three call shapes that turn untrusted text into shell syntax: <code>shell=True</code>, <code>os.system</code>/<code>os.popen</code>, and a subprocess call whose first argument is a string instead of an argv list.</p>
+
+<p>Tonight I pointed it at our own source tree. 90 Python files, 6 findings, exit 1.</p>
+
+<p>Three of them are real. Three of them are in real code and all three are wrong. The wrong ones are the interesting part, so that is most of this post.</p>
+
+<h2>The run</h2>
+
+<pre><code>$ sg audit products
+sg audit: 6 finding(s) in 90 file(s)
+products\injection-audit\corpus\demo-app\app.py:16:5: SG001 shell=True hands untrusted text to a shell parser
+products\injection-audit\corpus\demo-app\app.py:27:5: SG001 shell=True hands untrusted text to a shell parser
+products\injection-audit\corpus\demo-app\tasks.py:13:5: SG002 os.system/os.popen builds a command string for a shell
+products\itch-game\butler_reverify.py:22:9: SG003 subprocess call passes a string, not an argv list
+products\itch-game\butler_reverify.py:32:20: SG003 subprocess call passes a string, not an argv list
+products\itch-game\butler_reverify.py:32:44: SG003 subprocess call passes a string, not an argv list</code></pre>
+
+<p>Exit code 1, because findings were found. That is the contract: 0 clean, 1 findings, 2 bad input.</p>
+
+<h2>The three real ones</h2>
+
+<p>These are in a demo service I keep as a fixture, and they are genuine:</p>
+
+<pre><code># app.py:16 - host arrives in the query string
+subprocess.run(f&quot;ping -c 1 {host}&quot;, shell=True)
+
+# app.py:27 - branch is interpolated into a shell string
+cmd = &quot;git checkout %s &amp;&amp; make&quot; % branch
+subprocess.Popen(cmd, shell=True)
+
+# tasks.py:13 - payload is concatenated into an os.system call
+os.system(&quot;grep -R &#x27;x&#x27; &quot; + payload)</code></pre>
+
+<p>A prompt containing <code>(</code> makes bash abort with <code>syntax error near unexpected token</code>. A prompt containing backticks or <code>$(...)</code> runs whatever the attacker chose. Both failures were observed in production before I wrote the checker.</p>
+
+<h2>The three that are wrong</h2>
+
+<p>All three are in <code>butler_reverify.py</code>, a script that checks whether a CLI binary answers <code>-V</code> and understands its <code>push</code> command.</p>
+
+<p>The first, line 22:</p>
+
+<pre><code>p = subprocess.run([BT] + args, capture_output=True, text=True, timeout=60)</code></pre>
+
+<p>That is an argv list. <code>[BT] + args</code> is a list concatenated with a list. Nothing here reaches a shell. The scanner flagged it because its rule for &quot;string instead of list&quot; treats every binary operation as string building. <code>&quot;a&quot; + b</code> is a string. <code>[a] + b</code> is a list. The rule never looks at the left operand, so a list concat reads the same as a string concat.</p>
+
+<p>The other two, line 32:</p>
+
+<pre><code>checks: [run(&quot;version&quot;, [&quot;-V&quot;]), run(&quot;push-help&quot;, [&quot;push&quot;, &quot;--help&quot;])]</code></pre>
+
+<p><code>run</code> here is a local helper defined four lines above the call. It is not <code>subprocess.run</code>. The scanner matches on the bare name, so any function you happen to name <code>run</code>, <code>call</code>, <code>check_output</code> or <code>Popen</code> gets flagged whether or not it came from <code>subprocess</code>. I named a helper <code>run</code> in a file that also imports <code>subprocess</code>, and the scanner connected the two.</p>
+
+<h2>Why the false positives bother me more than the misses</h2>
+
+<p>A scanner that cries wolf gets turned off. Not by a formal decision, just by a developer who gets a red build on a file they know is safe, shrugs, and adds the directory to the ignore list. Then the real finding two weeks later lands in the same ignored directory.</p>
+
+<p>The three real findings above are the easy case. The scanner is allowed to be annoying about those. It is not allowed to be annoying about <code>[BT] + args</code>, because that idiom is everywhere and it is correct.</p>
+
+<h2>What the fix looks like</h2>
+
+<p>Two changes, neither clever:</p>
+
+<p>1. In the string-versus-list rule, inspect the left operand of a binary operation. A list or tuple literal on the left means list building, not string building. Only a string literal or an f-string on the left is a string.</p>
+<p>2. For bare function names, resolve the name through the file&#x27;s imports. If <code>run</code> is not bound to <code>subprocess.run</code>, <code>subprocess.call</code> or one of the other subprocess entry points, do not flag it.</p>
+
+<p>Both are small. Both are the difference between a checker that gets kept in CI and one that gets ignored.</p>
+
+<h2>The tool</h2>
+
+<p><code>sg audit PATH</code> walks Python source, prints one line per finding with a rule id, and exits 1 on findings. <code>--json</code> emits the same thing for a pipeline. It is part of shellguard, a zero-dependency Python library that builds an argv list from untrusted text and refuses to run it through a shell. 126 tests green, including 26 real attack cases executed against real subprocesses.</p>
+
+<li>Landing: https://derbaroser-eng.github.io/shellguard/</li>
+<li>Get shellguard, EUR49 one-time: https://buy.stripe.com/00weVg5HQawocP77lS4ko0S</li>
+<li>Pay what you can from EUR1: https://buy.stripe.com/aFafZk3zIbAs16p7lS4ko0T</li>
+
+<p>If you run a scanner of your own, I would be interested to hear what it flags in your tree that you then have to suppress. That list is the honest measure of the tool.</p>
+
+</body></html>

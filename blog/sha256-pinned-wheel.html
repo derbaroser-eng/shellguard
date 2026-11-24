@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>The PyPI name was taken, so I shipped a sha256-pinned wheel</title>
+<meta name="description" content="What shipping a zero-dependency Python wheel from a GitHub Release looks like, including the digest and the mistake I made first.">
+</head><body><main>
+<h1>The PyPI name was taken, so I shipped a sha256-pinned wheel</h1>
+<p><em>Elena Brandt - field note</em></p>
+<p>The name I wanted was already on PyPI. Not a squatter - someone simply got there first. Renaming it to something with -real would have made people trust the library less, so I shipped the wheel from a GitHub Release instead.</p>
+<h2>The install line</h2>
+<pre><code>pip install https://github.com/derbaroser-eng/shellguard-lib/releases/download/v1.5.1/shellguard-1.5.1-py3-none-any.whl</code></pre>
+<h2>Pin the bytes, not just the URL</h2>
+<pre><code>sha256:88224e4f5df6b54c1b36d221abe7aab739ba037b47076cafaf7f2dc885328ac1</code></pre>
+<p>A URL tells you where a file came from. A digest tells you it is still the file you reviewed. For a shell-injection library, that difference matters.</p>
+<h2>The mistake I made first</h2>
+<p>My first README linked the release tag page, not the asset. pip does not follow a tag page to find a wheel. If your install line ends in /tag/v1.5.1, it is wrong.</p>
+<h2>What you give up</h2>
+<p>No pip install shellguard, no upgrade notices, and a Release can be deleted. In exchange: a deterministic artifact, zero dependencies, Python 3.8+, 142 tests, no namespace politics.</p>
+<p>The source is MIT. The commercial license is EUR 49 once, with an offline license key and email support: <a href=https://buy.stripe.com/00weVg5HQawocP77lS4ko0S">checkout</a>. The source, tests and full write-up are on <a href="../">the project site</a>.</p>
+</main></body></html>
